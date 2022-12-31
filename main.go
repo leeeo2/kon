@@ -2,14 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/leeexeo/kon/log"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
+	"github.com/leeexeo/kon/orm"
 )
 
-var config = &log.Config{
+var logConf = &log.Config{
 	Filename:                  "./test.log",
 	MaxSize:                   1,
 	MaxAge:                    1,
@@ -25,6 +23,19 @@ var config = &log.Config{
 	IgnoreDuplicateError:      false,
 }
 
+var dbConf = &orm.Config{
+	User:        "root",
+	Password:    "12345678",
+	Host:        "localhost",
+	Port:        "3306",
+	Schema:      "user",
+	MaxIdleConn: 20,
+	MaxOpenConn: 5,
+	Charset:     "utf8",
+	Engine:      "InnoDB",
+	Collate:     "utf8_bin",
+}
+
 type User struct {
 	Name string
 	Sex  string
@@ -32,24 +43,13 @@ type User struct {
 }
 
 func main() {
-	log.SetupGlobal(config)
+	log.SetupGlobal(logConf)
 	ctx := context.Background()
 	log.Debug(ctx, "test debug log", "a", "b")
 	log.Info(ctx, "text info log", "c", "d", "e")
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=true", "root", "12345678", "127.0.0.1", 3306, "user", "utf8")
-	log.Debug(ctx, dsn)
-	gormLogger, _ := log.NewGormLogger(config)
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
-		Logger: gormLogger,
-	})
-	if err != nil {
-		panic("failed to connect database")
-	}
-	err = db.AutoMigrate(User{})
-	if err != nil {
-		panic("failed to AutoMigrate")
-	}
+	orm.SetupGlobal(dbConf, logConf, User{})
+	db := orm.GetDb()
 	db.Create(&User{
 		Name: "lixiang",
 		Sex:  "man",
